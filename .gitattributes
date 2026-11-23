@@ -1,0 +1,13 @@
+* text=auto
+*.cs text eol=lf diff=csharp
+*.unity text eol=lf
+*.prefab text eol=lf
+*.asset text eol=lf
+*.meta text eol=lf
+*.png binary
+*.ogg binary
+*.mp3 binary
+*.ttf binary
+
+# Keep the original GameMaker files byte-for-byte
+GameMaker-Original/** -text
