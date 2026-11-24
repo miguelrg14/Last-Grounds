@@ -9,8 +9,26 @@ namespace LastGrounds
     /// Thin input layer. Works with the Input System package (keyboard + gamepad)
     /// and falls back to the legacy Input Manager when that is the active backend.
     /// </summary>
+    /// <summary>Replaces the player's gameplay input (used by the showcase autopilot).</summary>
+    public interface IGameInputSource
+    {
+        float Horizontal();
+        bool FirePressed();
+        bool FireHeld();
+        int WeaponSlot();
+    }
+
     public static class GameInput
     {
+        /// <summary>When set, movement, shooting and weapon selection come from this source.</summary>
+        public static IGameInputSource Override { get; set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Override = null;
+        }
+
 #if ENABLE_INPUT_SYSTEM
         static bool Held(Key key)
         {
@@ -29,6 +47,7 @@ namespace LastGrounds
 
         public static float Horizontal()
         {
+            if (Override != null) return Override.Horizontal();
             float h = 0f;
 #if ENABLE_INPUT_SYSTEM
             if (Held(Key.LeftArrow) || Held(Key.A)) h -= 1f;
@@ -48,6 +67,7 @@ namespace LastGrounds
 
         public static bool FirePressed()
         {
+            if (Override != null) return Override.FirePressed();
 #if ENABLE_INPUT_SYSTEM
             Gamepad pad = Pad;
             return Down(Key.Space) || (pad != null && (pad.buttonSouth.wasPressedThisFrame || pad.rightTrigger.wasPressedThisFrame));
@@ -58,6 +78,7 @@ namespace LastGrounds
 
         public static bool FireHeld()
         {
+            if (Override != null) return Override.FireHeld();
 #if ENABLE_INPUT_SYSTEM
             Gamepad pad = Pad;
             return Held(Key.Space) || (pad != null && (pad.buttonSouth.isPressed || pad.rightTrigger.isPressed));
@@ -69,6 +90,7 @@ namespace LastGrounds
         /// <summary>E, right shoulder, or Ctrl (Ctrl was the weapon key in the original).</summary>
         public static bool NextWeapon()
         {
+            if (Override != null) return false;
 #if ENABLE_INPUT_SYSTEM
             Gamepad pad = Pad;
             return Down(Key.E) || Down(Key.LeftCtrl) || Down(Key.RightCtrl) || (pad != null && pad.rightShoulder.wasPressedThisFrame);
@@ -79,6 +101,7 @@ namespace LastGrounds
 
         public static bool PreviousWeapon()
         {
+            if (Override != null) return false;
 #if ENABLE_INPUT_SYSTEM
             Gamepad pad = Pad;
             return Down(Key.Q) || (pad != null && pad.leftShoulder.wasPressedThisFrame);
@@ -90,6 +113,7 @@ namespace LastGrounds
         /// <summary>Returns 0..2 when a number key 1..3 was pressed this frame, otherwise -1.</summary>
         public static int WeaponSlot()
         {
+            if (Override != null) return Override.WeaponSlot();
 #if ENABLE_INPUT_SYSTEM
             if (Down(Key.Digit1) || Down(Key.Numpad1)) return 0;
             if (Down(Key.Digit2) || Down(Key.Numpad2)) return 1;

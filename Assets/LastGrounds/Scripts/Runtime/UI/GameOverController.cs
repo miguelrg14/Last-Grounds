@@ -37,6 +37,8 @@ namespace LastGrounds
 
         bool EntryOpen { get { return entryRoot != null && entryRoot.activeSelf; } }
 
+        public InputField NameInput { get { return nameInput; } }
+
         void Start()
         {
             Time.timeScale = 1f;

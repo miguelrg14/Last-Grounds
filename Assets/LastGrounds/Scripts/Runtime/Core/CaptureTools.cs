@@ -18,6 +18,11 @@ namespace LastGrounds
 
         bool uiHidden;
 
+        public static void SetInvincibleBarricade(bool on)
+        {
+            InvincibleBarricade = on;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Install()
         {

@@ -64,6 +64,10 @@ You can regenerate everything at any time from **Last Grounds → Rebuild Projec
 | F10 | Hide / show the UI for clean shots |
 | F9 | Invincible barricade, to record long gameplay takes |
 
+**Last Grounds → Capture Showcase** records a scripted run (menus, a demo round played by
+an autopilot, the barricade falling and the game over screen) at 672×1056 / 60 fps with
+game audio, and saves 8 screenshots plus `markers.json` to `Recordings/Showcase_*`.
+
 ## Building
 
 Builds are made by GitHub Actions with [GameCI](https://game.ci)
