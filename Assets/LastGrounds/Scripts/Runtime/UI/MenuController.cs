@@ -26,6 +26,8 @@ namespace LastGrounds
         [SerializeField] string mainPanel = "Main";
         [SerializeField] AudioClip menuMusic;
         [SerializeField] GameModeData storyMode;
+        [Tooltip("Modes the horde buttons can start, looked up by GameModeData.id.")]
+        [SerializeField] GameModeData[] hordeModes = new GameModeData[0];
 
         Panel current;
 
@@ -94,6 +96,20 @@ namespace LastGrounds
         public void StartStory()
         {
             StartMode(storyMode);
+        }
+
+        /// <summary>Starts the horde mode whose <see cref="GameModeData.id"/> matches.</summary>
+        public void StartHorde(string modeId)
+        {
+            for (int i = 0; i < hordeModes.Length; i++)
+            {
+                if (hordeModes[i] != null && hordeModes[i].id == modeId)
+                {
+                    StartMode(hordeModes[i]);
+                    return;
+                }
+            }
+            Debug.LogError("[Last Grounds] No horde mode with id '" + modeId + "'. Run 'Last Grounds > Rebuild Project'.", this);
         }
 
         public void QuitGame()

@@ -39,7 +39,7 @@ namespace LastGrounds.EditorTools
         /// Bump when the builder changes what it generates: projects built with an older
         /// version are rebuilt automatically the next time scripts reload.
         /// </summary>
-        const int BuildVersion = 2;
+        const int BuildVersion = 3;
 
         static string BuildVersionKey { get { return "LastGrounds.BuildVersion." + Application.dataPath; } }
 
@@ -144,6 +144,11 @@ namespace LastGrounds.EditorTools
             SerializedObject so = new SerializedObject(menu);
             if (so.FindProperty("storyMode").objectReferenceValue == null)
                 throw new InvalidOperationException("The Menu scene has no Story mode assigned after building.");
+            SerializedProperty horde = so.FindProperty("hordeModes");
+            if (horde.arraySize == 0) throw new InvalidOperationException("The Menu scene has no horde modes assigned.");
+            for (int i = 0; i < horde.arraySize; i++)
+                if (horde.GetArrayElementAtIndex(i).objectReferenceValue == null)
+                    throw new InvalidOperationException("Horde mode " + i + " is missing in the Menu scene.");
         }
 
         // ------------------------------------------------------------------ imports
@@ -630,11 +635,11 @@ namespace LastGrounds.EditorTools
             Button hard = MakeButton(hordePanel, "Hard", "HARD", "Button_Yellow", 56, 128);
             Button hardcore = MakeButton(hordePanel, "Hardcore", "HARDCORE", "Button_Red", 56, 144);
             Button hordeBack = MakeButton(hordePanel, "Back", "BACK", "Button_Teal", 56, 160);
-            UnityEventTools.AddObjectPersistentListener<GameModeData>(ascent.onClick, ctrl.StartMode, modes["ascent"]);
-            UnityEventTools.AddObjectPersistentListener<GameModeData>(easy.onClick, ctrl.StartMode, modes["easy"]);
-            UnityEventTools.AddObjectPersistentListener<GameModeData>(normalB.onClick, ctrl.StartMode, modes["normal"]);
-            UnityEventTools.AddObjectPersistentListener<GameModeData>(hard.onClick, ctrl.StartMode, modes["hard"]);
-            UnityEventTools.AddObjectPersistentListener<GameModeData>(hardcore.onClick, ctrl.StartMode, modes["hardcore"]);
+            UnityEventTools.AddStringPersistentListener(ascent.onClick, ctrl.StartHorde, "ascent");
+            UnityEventTools.AddStringPersistentListener(easy.onClick, ctrl.StartHorde, "easy");
+            UnityEventTools.AddStringPersistentListener(normalB.onClick, ctrl.StartHorde, "normal");
+            UnityEventTools.AddStringPersistentListener(hard.onClick, ctrl.StartHorde, "hard");
+            UnityEventTools.AddStringPersistentListener(hardcore.onClick, ctrl.StartHorde, "hardcore");
             UnityEventTools.AddStringPersistentListener(hordeBack.onClick, ctrl.ShowPanel, "Play");
             panels.Add(new PanelDef { id = "Horde", root = hordePanel.gameObject, first = normalB, backTo = "Play" });
 
@@ -698,6 +703,11 @@ namespace LastGrounds.EditorTools
             }
             so.FindProperty("menuMusic").objectReferenceValue = Clip("Music/Music_Menu.ogg");
             so.FindProperty("storyMode").objectReferenceValue = modes["story"];
+            string[] hordeIds = { "ascent", "easy", "normal", "hard", "hardcore" };
+            SerializedProperty hordeList = so.FindProperty("hordeModes");
+            hordeList.arraySize = hordeIds.Length;
+            for (int i = 0; i < hordeIds.Length; i++)
+                hordeList.GetArrayElementAtIndex(i).objectReferenceValue = modes[hordeIds[i]];
             so.ApplyModifiedPropertiesWithoutUndo();
 
             for (int i = 1; i < panels.Count; i++) panels[i].root.SetActive(false);
