@@ -40,7 +40,7 @@ namespace LastGrounds.EditorTools
         /// Bump when the builder changes what it generates: projects built with an older
         /// version are rebuilt automatically the next time scripts reload.
         /// </summary>
-        const int BuildVersion = 6;
+        const int BuildVersion = 7;
 
         static string BuildVersionKey { get { return "LastGrounds.BuildVersion." + Application.dataPath; } }
 
@@ -681,7 +681,7 @@ namespace LastGrounds.EditorTools
             Variant(weaponKeys.gameObject, PlatformVariant.Mode.HideOnTouch);
             Image touchHelp = ImageTL(controlsPanel, "TouchHelp", pixel, 12, 84, 88, 58);
             touchHelp.color = new Color(0f, 0f, 0f, 0.75f);
-            Label(touchHelp.rectTransform, "Text", "LEFT PAD = MOVE\nFIRE = SHOOT\n1 2 3 = WEAPON\nII = PAUSE", 0, 0, 88, 58, 8,
+            Label(touchHelp.rectTransform, "Text", "< > = MOVE\nFIRE = SHOOT\n1 2 3 = WEAPON\nII = PAUSE", 0, 0, 88, 58, 8,
                 TextAnchor.MiddleCenter, Color.white).lineSpacing = 1.3f;
             Variant(touchHelp.gameObject, PlatformVariant.Mode.ShowOnTouch);
             Button controlsBack = MakeButton(controlsPanel, "Back", "BACK", "Button_Teal", 56, 160);
@@ -942,44 +942,16 @@ namespace LastGrounds.EditorTools
             Button pause = TouchButton(pad, "Pause", "II", 0.84f, 0.72f, 0.97f, 0.95f, 34);
             UnityEventTools.AddPersistentListener(pause.onClick, touch.Pause);
 
-            // Left: move zone (a track with a knob that follows the finger).
-            RectTransform move = UI("MoveZone", pad);
-            Anchor(move, 0.03f, 0.06f, 0.62f, 0.64f);
-            Image moveBack = move.gameObject.AddComponent<Image>();
-            moveBack.sprite = pixel;
-            moveBack.color = new Color(1f, 1f, 1f, 0.08f);
-            moveBack.raycastTarget = false;
-            RectTransform track = UI("Track", move);
-            Anchor(track, 0.04f, 0.46f, 0.96f, 0.54f);
-            Image trackImage = track.gameObject.AddComponent<Image>();
-            trackImage.sprite = pixel;
-            trackImage.color = new Color(1f, 1f, 1f, 0.25f);
-            trackImage.raycastTarget = false;
-            RectTransform knob = UI("Knob", move);
-            Anchor(knob, 0.44f, 0.2f, 0.56f, 0.8f);
-            Image knobImage = knob.gameObject.AddComponent<Image>();
-            knobImage.sprite = pixel;
-            knobImage.color = new Color(0.83f, 0.94f, 0f, 0.9f);
-            knobImage.raycastTarget = false;
-            RectTransform moveLabel = UI("Label", move);
-            Anchor(moveLabel, 0f, 0.02f, 1f, 0.3f);
-            ConfigureText(moveLabel.gameObject.AddComponent<Text>(), "< MOVE >", 28, TextAnchor.MiddleCenter, Grey, false);
+            // Left: < and > buttons (held).
+            Image left = PadImage(pad, "Left", "<", 0.03f, 0.06f, 0.30f, 0.64f, new Color(0.2f, 0.2f, 0.2f, 0.85f), 64);
+            Image right = PadImage(pad, "Right", ">", 0.33f, 0.06f, 0.60f, 0.64f, new Color(0.2f, 0.2f, 0.2f, 0.85f), 64);
 
             // Right: FIRE (held).
-            RectTransform fire = UI("Fire", pad);
-            Anchor(fire, 0.66f, 0.06f, 0.97f, 0.64f);
-            Image fireImage = fire.gameObject.AddComponent<Image>();
-            fireImage.sprite = pixel;
-            fireImage.color = new Color(0.55f, 0.08f, 0.08f, 0.9f);
-            fireImage.raycastTarget = false;
-            RectTransform fireLabel = UI("Label", fire);
-            Stretch(fireLabel, 0f);
-            ConfigureText(fireLabel.gameObject.AddComponent<Text>(), "FIRE", 44, TextAnchor.MiddleCenter, Color.white, false);
+            Image fire = PadImage(pad, "Fire", "FIRE", 0.66f, 0.06f, 0.97f, 0.64f, new Color(0.55f, 0.08f, 0.08f, 0.9f), 44);
 
-            Set(touch, "moveZone", move);
-            Set(touch, "moveKnob", knob);
+            Set(touch, "leftButton", left);
+            Set(touch, "rightButton", right);
             Set(touch, "fireButton", fire);
-            Set(touch, "fireImage", fireImage);
             Set(touch, "root", root.gameObject);
             Set(touch, "pad", pad);
             Set(touch, "canvas", canvas);
@@ -1007,6 +979,21 @@ namespace LastGrounds.EditorTools
             Stretch(textRT, 0f);
             ConfigureText(textRT.gameObject.AddComponent<Text>(), label, fontSize, TextAnchor.MiddleCenter, Color.white, false);
             return button;
+        }
+
+        /// <summary>A held touch area (not a Button): TouchControls reads the fingers directly.</summary>
+        static Image PadImage(Transform parent, string name, string label, float xMin, float yMin, float xMax, float yMax, Color color, int fontSize)
+        {
+            RectTransform rt = UI(name, parent);
+            Anchor(rt, xMin, yMin, xMax, yMax);
+            Image img = rt.gameObject.AddComponent<Image>();
+            img.sprite = pixel;
+            img.color = color;
+            img.raycastTarget = false;
+            RectTransform textRT = UI("Label", rt);
+            Stretch(textRT, 0f);
+            ConfigureText(textRT.gameObject.AddComponent<Text>(), label, fontSize, TextAnchor.MiddleCenter, Color.white, false);
+            return img;
         }
 
         static void Anchor(RectTransform rt, float xMin, float yMin, float xMax, float yMax)

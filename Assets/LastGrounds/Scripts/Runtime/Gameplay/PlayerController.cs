@@ -24,8 +24,7 @@ namespace LastGrounds
         SpriteRenderer spriteRenderer;
         int weaponIndex;
         float nextShotTime;
-        bool hasTouchTarget;
-        float touchTargetX;
+        float touchHorizontal;
         bool touchFiring;
 
         public WeaponData CurrentWeapon { get { return weapons.Length > 0 ? weapons[weaponIndex] : null; } }
@@ -52,11 +51,10 @@ namespace LastGrounds
             HandleFire();
         }
 
-        /// <summary>Touch controls: walk towards <paramref name="targetX"/> (world) while moving; fire while held. Independent.</summary>
-        public void SetTouchInput(bool moving, float targetX, bool firing)
+        /// <summary>Touch controls: -1 / 0 / 1 from the arrow buttons, and FIRE held. Independent.</summary>
+        public void SetTouchInput(float horizontal, bool firing)
         {
-            hasTouchTarget = moving;
-            touchTargetX = targetX;
+            touchHorizontal = Mathf.Clamp(horizontal, -1f, 1f);
             touchFiring = firing;
         }
 
@@ -70,16 +68,7 @@ namespace LastGrounds
 
         void Move()
         {
-            if (hasTouchTarget)
-            {
-                Vector3 p = transform.position;
-                float goal = Mathf.Clamp(touchTargetX, minX, maxX);
-                p.x = Mathf.MoveTowards(p.x, goal, moveSpeed * Time.deltaTime);
-                transform.position = p;
-                return;
-            }
-
-            float input = GameInput.Horizontal();
+            float input = touchHorizontal != 0f ? touchHorizontal : GameInput.Horizontal();
             if (input == 0f) return;
             Vector3 position = transform.position;
             position.x = Mathf.Clamp(position.x + input * moveSpeed * Time.deltaTime, minX, maxX);

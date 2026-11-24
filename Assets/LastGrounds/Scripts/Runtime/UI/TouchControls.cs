@@ -6,7 +6,7 @@ namespace LastGrounds
 {
     /// <summary>
     /// On-screen controls for phones, under the game view:
-    ///  - Move zone (left): drag along it and the player walks to the matching spot of the field.
+    ///  - &lt; and &gt; buttons (left): move while held; the thumb can slide from one to the other.
     ///  - FIRE button (right): shoots while held.
     ///  - Weapon buttons 1-2-3 and pause.
     /// Moving and shooting are independent, so both thumbs can be used at once.
@@ -17,10 +17,11 @@ namespace LastGrounds
         [SerializeField] GameObject root;
         [SerializeField] RectTransform pad;
         [SerializeField] Canvas canvas;
-        [SerializeField] RectTransform moveZone;
-        [SerializeField] RectTransform moveKnob;
-        [SerializeField] RectTransform fireButton;
-        [SerializeField] Image fireImage;
+        [SerializeField] Image leftButton;
+        [SerializeField] Image rightButton;
+        [SerializeField] Image fireButton;
+        [SerializeField] Color moveIdle = new Color(0.2f, 0.2f, 0.2f, 0.85f);
+        [SerializeField] Color movePressed = new Color(0.83f, 0.94f, 0f, 0.95f);
         [SerializeField] Color fireIdle = new Color(0.55f, 0.08f, 0.08f, 0.9f);
         [SerializeField] Color firePressed = new Color(0.95f, 0.2f, 0.15f, 1f);
         [SerializeField] Image[] weaponButtons = new Image[0];
@@ -33,7 +34,6 @@ namespace LastGrounds
         [SerializeField, Range(0.1f, 0.4f)] float padFraction = 0.24f;
 
         readonly List<TouchPoint> touches = new List<TouchPoint>();
-        int moveFinger = -1;
         int fireFinger = -1;
 
         void OnEnable()
@@ -49,7 +49,7 @@ namespace LastGrounds
             if (player != null)
             {
                 player.WeaponChanged -= OnWeaponChanged;
-                player.SetTouchInput(false, 0f, false);
+                player.SetTouchInput(0f, false);
             }
         }
 
@@ -65,9 +65,8 @@ namespace LastGrounds
             if (viewport != null) viewport.SetLayout(on ? 1f : 0.5f, on ? padFraction : 0f);
             if (!on)
             {
-                moveFinger = -1;
                 fireFinger = -1;
-                if (player != null) player.SetTouchInput(false, 0f, false);
+                if (player != null) player.SetTouchInput(0f, false);
             }
         }
 
@@ -77,80 +76,47 @@ namespace LastGrounds
             LayoutPad();
             GameInput.GetTouches(touches);
 
-            // A finger keeps its role (move or fire) from where it first touched until it lifts.
-            TouchPoint? move = Find(moveFinger);
-            TouchPoint? fire = Find(fireFinger);
-            if (move == null) moveFinger = -1;
-            if (fire == null) fireFinger = -1;
+            // FIRE keeps the finger that pressed it until it lifts, even if it slides off.
+            bool fireStillDown = false;
+            for (int i = 0; i < touches.Count; i++)
+                if (touches[i].id == fireFinger) fireStillDown = true;
+            if (!fireStillDown) fireFinger = -1;
 
+            bool left = false;
+            bool right = false;
             for (int i = 0; i < touches.Count; i++)
             {
                 TouchPoint t = touches[i];
-                if (!t.began || t.id == moveFinger || t.id == fireFinger) continue;
-                if (moveFinger < 0 && Contains(moveZone, t.position))
-                {
-                    moveFinger = t.id;
-                    move = t;
-                }
-                else if (fireFinger < 0 && Contains(fireButton, t.position))
+                if (t.id == fireFinger) continue;
+                if (fireFinger < 0 && t.began && Contains(fireButton, t.position))
                 {
                     fireFinger = t.id;
-                    fire = t;
+                    continue;
                 }
+                // Arrows react to where the finger is now, so the thumb can slide between them.
+                if (Contains(leftButton, t.position)) left = true;
+                else if (Contains(rightButton, t.position)) right = true;
             }
 
-            bool firing = fire != null;
-            if (fireImage != null) fireImage.color = firing ? firePressed : fireIdle;
+            bool firing = fireFinger >= 0;
+            Tint(fireButton, firing ? firePressed : fireIdle);
+            Tint(leftButton, left ? movePressed : moveIdle);
+            Tint(rightButton, right ? movePressed : moveIdle);
 
             bool playing = game == null || game.IsPlaying;
-            if (!playing)
-            {
-                player.SetTouchInput(false, 0f, false);
-                return;
-            }
-
-            bool moving = move != null;
-            float targetX = 0f;
-            if (moving)
-            {
-                float t = ZoneFraction(move.Value.position);
-                targetX = Mathf.Lerp(PlayField.LaneX(0), PlayField.LaneX(PlayField.LaneCount - 1), t);
-                PlaceKnob(t);
-            }
-            player.SetTouchInput(moving, targetX, firing);
+            float horizontal = left == right ? 0f : (left ? -1f : 1f);
+            player.SetTouchInput(playing ? horizontal : 0f, playing && firing);
         }
 
-        TouchPoint? Find(int id)
+        static void Tint(Image image, Color color)
         {
-            if (id < 0) return null;
-            for (int i = 0; i < touches.Count; i++)
-                if (touches[i].id == id) return touches[i];
-            return null;
+            if (image != null) image.color = color;
         }
 
-        /// <summary>0 at the left end of the move zone, 1 at the right end.</summary>
-        float ZoneFraction(Vector2 screenPosition)
+        static bool Contains(Image image, Vector2 screenPosition)
         {
-            Vector2 local;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(moveZone, screenPosition, null, out local);
-            Rect r = moveZone.rect;
-            return Mathf.Clamp01((local.x - r.xMin) / Mathf.Max(1f, r.width));
-        }
-
-        void PlaceKnob(float fraction)
-        {
-            if (moveKnob == null) return;
-            Vector2 min = moveKnob.anchorMin;
-            Vector2 max = moveKnob.anchorMax;
-            float half = (max.x - min.x) * 0.5f;
-            moveKnob.anchorMin = new Vector2(fraction - half, min.y);
-            moveKnob.anchorMax = new Vector2(fraction + half, max.y);
-        }
-
-        static bool Contains(RectTransform rect, Vector2 screenPosition)
-        {
-            return rect != null && rect.gameObject.activeInHierarchy
-                && RectTransformUtility.RectangleContainsScreenPoint(rect, screenPosition, null);
+            return image != null && image.gameObject.activeInHierarchy
+                && RectTransformUtility.RectangleContainsScreenPoint(image.rectTransform, screenPosition, null);
         }
 
         /// <summary>The pad fills whatever is left below the game view.</summary>
@@ -177,7 +143,7 @@ namespace LastGrounds
         void OnWeaponChanged(WeaponData weapon, int index)
         {
             for (int i = 0; i < weaponButtons.Length; i++)
-                if (weaponButtons[i] != null) weaponButtons[i].color = i == index ? weaponSelected : weaponIdle;
+                Tint(weaponButtons[i], i == index ? weaponSelected : weaponIdle);
         }
     }
 }
