@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5050eda2faf9fb42831f6f880e683ae, type: 3}
+  m_Name: Mode_Story
+  m_EditorClassIdentifier: Assembly-CSharp::LastGrounds.GameModeData
+  id: story
+  displayName: STORY
+  firstSpawnDelay: 3
+  phases:
+  - label: DAY 1
+    startTime: 0
+    intervals:
+    - 2
+    - 3
+    enemies:
+    - prefab: {fileID: 5807772198091862714, guid: 4a958b20c2a97694e9f3532ab90c3aee, type: 3}
+      weight: 6
+    - prefab: {fileID: 8798675693999276313, guid: dd463da9c91a6e5489ef8ac338770629, type: 3}
+      weight: 3
+    - prefab: {fileID: 2808744849072579681, guid: f872b8dffe5aa6548baa9ce7a43be013, type: 3}
+      weight: 1
+  - label: DAY 2
+    startTime: 60
+    intervals:
+    - 1
+    - 2
+    - 3
+    enemies:
+    - prefab: {fileID: 5807772198091862714, guid: 4a958b20c2a97694e9f3532ab90c3aee, type: 3}
+      weight: 4
+    - prefab: {fileID: 8798675693999276313, guid: dd463da9c91a6e5489ef8ac338770629, type: 3}
+      weight: 4
+    - prefab: {fileID: 4060793158987743547, guid: 9fa2a91c7d316bc4488477cefee12dd9, type: 3}
+      weight: 1
+    - prefab: {fileID: 2808744849072579681, guid: f872b8dffe5aa6548baa9ce7a43be013, type: 3}
+      weight: 1
+  - label: DAY 3
+    startTime: 120
+    intervals:
+    - 1
+    - 2
+    enemies:
+    - prefab: {fileID: 5807772198091862714, guid: 4a958b20c2a97694e9f3532ab90c3aee, type: 3}
+      weight: 4
+    - prefab: {fileID: 8798675693999276313, guid: dd463da9c91a6e5489ef8ac338770629, type: 3}
+      weight: 4
+    - prefab: {fileID: 4060793158987743547, guid: 9fa2a91c7d316bc4488477cefee12dd9, type: 3}
+      weight: 1
+    - prefab: {fileID: 2808744849072579681, guid: f872b8dffe5aa6548baa9ce7a43be013, type: 3}
+      weight: 1
+    - prefab: {fileID: 953056166449715353, guid: 22e9e57e9a1b8704785c75a0dff372bf, type: 3}
+      weight: 1
+  - label: DAY 4
+    startTime: 180
+    intervals:
+    - 1
+    - 2
+    enemies:
+    - prefab: {fileID: 5807772198091862714, guid: 4a958b20c2a97694e9f3532ab90c3aee, type: 3}
+      weight: 2
+    - prefab: {fileID: 8798675693999276313, guid: dd463da9c91a6e5489ef8ac338770629, type: 3}
+      weight: 6
+    - prefab: {fileID: 4060793158987743547, guid: 9fa2a91c7d316bc4488477cefee12dd9, type: 3}
+      weight: 1
+    - prefab: {fileID: 2808744849072579681, guid: f872b8dffe5aa6548baa9ce7a43be013, type: 3}
+      weight: 1
+    - prefab: {fileID: 953056166449715353, guid: 22e9e57e9a1b8704785c75a0dff372bf, type: 3}
+      weight: 1
+  - label: DAY 5
+    startTime: 240
+    intervals:
+    - 1
+    enemies:
+    - prefab: {fileID: 5807772198091862714, guid: 4a958b20c2a97694e9f3532ab90c3aee, type: 3}
+      weight: 1
+    - prefab: {fileID: 8798675693999276313, guid: dd463da9c91a6e5489ef8ac338770629, type: 3}
+      weight: 6
+    - prefab: {fileID: 4060793158987743547, guid: 9fa2a91c7d316bc4488477cefee12dd9, type: 3}
+      weight: 2
+    - prefab: {fileID: 2808744849072579681, guid: f872b8dffe5aa6548baa9ce7a43be013, type: 3}
+      weight: 1
+    - prefab: {fileID: 953056166449715353, guid: 22e9e57e9a1b8704785c75a0dff372bf, type: 3}
+      weight: 1
+  barricadeHealth: 100
+  biteDamage: 20
+  biteCooldown: 1.6666666
+  survivalTime: 300
+  victoryMessage: RESCUED!
