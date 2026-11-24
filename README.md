@@ -20,6 +20,7 @@ the way I would build it today.
 
 - **In the browser**: https://miguelrg14.github.io/Last-Grounds/
 - **Windows / Linux**: download the zip from the [latest release](https://github.com/miguelrg14/Last-Grounds/releases/latest)
+- **Android**: install the APK from the latest release, or play the browser version on your phone
 
 ## Features
 
@@ -29,19 +30,21 @@ the way I would build it today.
 - **Three weapons**: pistol, shotgun (wide blast) and an automatic MP7.
 - **Per-mode top-10 leaderboard** with name entry, saved locally.
 - **Options**: music and SFX volume, fullscreen.
-- Keyboard, mouse and **gamepad** support; every menu can be driven without a mouse.
+- Keyboard, mouse, **gamepad** and **touch** support; every menu can be driven without a mouse.
+- **Plays on phones**: on-screen controls appear automatically on touch screens, in the
+  Android app and in mobile browsers alike (same project, same web build).
 - Pixel-perfect letterboxed rendering at the original 112×176 resolution.
 
 ## Controls
 
-| Action | Keyboard | Gamepad |
-| --- | --- | --- |
-| Move | ← → / A D | Left stick / D-pad |
-| Shoot | Space | A / Right trigger |
-| Switch weapon | 1 2 3, Q / E, Ctrl | LB / RB |
-| Pause | Esc / P | Start |
-| Fullscreen (browser) | Button under the game | — |
-| Clear leaderboard (game over screen) | C | — |
+| Action | Keyboard | Gamepad | Touch |
+| --- | --- | --- | --- |
+| Move | ← → / A D | Left stick / D-pad | Drag on the pad below the game |
+| Shoot | Space | A / Right trigger | Hold your finger down |
+| Switch weapon | 1 2 3, Q / E, Ctrl | LB / RB | Weapon buttons |
+| Pause | Esc / P | Start | II button / Android back |
+| Fullscreen (browser) | Button under the game | — | — |
+| Clear leaderboard (game over screen) | C | — | CLEAR LIST button |
 
 ## Opening the project
 
@@ -71,8 +74,8 @@ Builds are made by GitHub Actions with [GameCI](https://game.ci)
 
 | Trigger | Result |
 | --- | --- |
-| Actions → *Build & Release* → **Run workflow** | WebGL, Windows and Linux builds as artifacts; web version deployed to GitHub Pages |
-| Push a tag `v*` (e.g. `git tag v1.0.0 && git push origin v1.0.0`) | The above, plus a GitHub Release with the zips and an upload to itch.io |
+| Actions → *Build & Release* → **Run workflow** | WebGL, Windows, Linux and Android (APK) builds as artifacts; web version deployed to GitHub Pages |
+| Push a tag `v*` (e.g. `git tag v1.0.0 && git push origin v1.0.0`) | The above, plus a GitHub Release with the zips and the APK, and an upload to itch.io |
 
 CI calls `LastGrounds.EditorTools.CIBuild.Build`, which generates the project and builds
 the player, so the generated folders do not need to be committed.
@@ -86,7 +89,18 @@ the player, so the generated folders do not need to be committed.
 2. **GitHub Pages**: Settings → Pages → Source: **GitHub Actions**.
 3. **itch.io (optional)**: create the game page, add the secret `BUTLER_API_KEY`
    (from https://itch.io/user/settings/api-keys) and the variable `ITCH_GAME`
-   (e.g. `miguelrg14/last-grounds`). Channels: `html5`, `windows`, `linux`.
+   (e.g. `miguelrg14/last-grounds`). Channels: `html5`, `windows`, `linux`, `android`.
+   For the web version tick **Mobile friendly** (orientation: portrait) so it is offered on phones.
+4. **Android signing (optional)**: without a keystore the APK is signed with Unity's debug key,
+   which is fine for itch.io and installing by hand. For Google Play, create a keystore
+   (Unity: Project Settings → Player → Android → Publishing Settings → Keystore Manager) and add
+   `ANDROID_KEYSTORE_BASE64` (`base64 -w0 your.keystore`), `ANDROID_KEYSTORE_PASS`,
+   `ANDROID_KEYALIAS_NAME` and `ANDROID_KEYALIAS_PASS`. Keep the keystore safe: every update
+   must be signed with the same one.
+
+**Building Android locally**: install *Android Build Support* (with OpenJDK and SDK & NDK)
+for your Unity version in Unity Hub, switch to Android in Build Profiles and build.
+Settings (portrait, `com.miguelrg14.lastgrounds`, IL2CPP, ARM64) are applied by the builder.
 
 ## How the port is structured
 

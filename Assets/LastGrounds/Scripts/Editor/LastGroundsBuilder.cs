@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Events;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -39,7 +40,7 @@ namespace LastGrounds.EditorTools
         /// Bump when the builder changes what it generates: projects built with an older
         /// version are rebuilt automatically the next time scripts reload.
         /// </summary>
-        const int BuildVersion = 4;
+        const int BuildVersion = 5;
 
         static string BuildVersionKey { get { return "LastGrounds.BuildVersion." + Application.dataPath; } }
 
@@ -205,6 +206,12 @@ namespace LastGrounds.EditorTools
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
             EditorSettings.defaultBehaviorMode = EditorBehaviorMode.Mode2D;
+
+            // Android: portrait only, 64-bit (required by Google Play).
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.miguelrg14.lastgrounds");
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
         }
 
         // ------------------------------------------------------------------ data + prefabs
@@ -522,7 +529,10 @@ namespace LastGrounds.EditorTools
             Button quit = MakeButton(pause, "Menu", "MENU", "Button_Red", 56, 118);
             UnityEventTools.AddPersistentListener(resume.onClick, gm.Resume);
             UnityEventTools.AddPersistentListener(quit.onClick, gm.QuitToMenu);
-            Label(pause, "Hint", "ESC TO RESUME", 0, 140, 112, 8, 6, TextAnchor.MiddleCenter, Grey);
+            Text pauseHint = Label(pause, "Hint", "ESC TO RESUME", 0, 140, 112, 8, 6, TextAnchor.MiddleCenter, Grey);
+            Variant(pauseHint.gameObject, PlatformVariant.Mode.HideOnTouch);
+
+            BuildTouchControls(cam, gm, player);
 
             Set(gm, "defaultMode", defaultMode);
             Set(gm, "barricade", barricade);
@@ -569,7 +579,11 @@ namespace LastGrounds.EditorTools
             names.lineSpacing = 1.1f;
             scores.lineSpacing = 1.1f;
 
-            Label(canvas, "Hint", "PRESS C TO CLEAR LIST", 0, 140, 112, 8, 6, TextAnchor.MiddleCenter, Grey);
+            Text clearHint = Label(canvas, "Hint", "PRESS C TO CLEAR LIST", 0, 140, 112, 8, 6, TextAnchor.MiddleCenter, Grey);
+            Variant(clearHint.gameObject, PlatformVariant.Mode.HideOnTouch);
+            Button clear = MakeButton(canvas, "Clear", "CLEAR LIST", "Button_Purple", 56, 142, 60, 10, 6);
+            UnityEventTools.AddPersistentListener(clear.onClick, ctrl.ClearList);
+            Variant(clear.gameObject, PlatformVariant.Mode.ShowOnTouch);
             Button menu = MakeButton(canvas, "Menu", "MENU", "Button_Teal", 56, 160);
             UnityEventTools.AddPersistentListener(menu.onClick, ctrl.BackToMenu);
 
@@ -615,6 +629,7 @@ namespace LastGrounds.EditorTools
             RectTransform title = Panel(canvas, "Title");
             Text press = Label(title, "PressAnyKey", "PRESS ANY KEY", 0, 154, 112, 12, 8, TextAnchor.MiddleCenter, Color.white);
             press.gameObject.AddComponent<UITextBlink>();
+            Variant(press.gameObject, PlatformVariant.Mode.SwapText, "TAP TO START");
             panels.Add(new PanelDef { id = "Title", root = title.gameObject });
 
             // Main menu (Menu room). Buttons were scaled 1.2 in X.
@@ -660,8 +675,15 @@ namespace LastGrounds.EditorTools
 
             // Controls (MenuControles) + the new weapon keys.
             RectTransform controlsPanel = Panel(canvas, "Controls");
-            ImageTL(controlsPanel, "Frame", SpriteAt("UI/Panel_Controls"), 16, 80, 80, 64);
-            Label(controlsPanel, "Weapons", "1-3 / Q E = WEAPON", 0, 145, 112, 8, 6, TextAnchor.MiddleCenter, Yellow);
+            Image keysFrame = ImageTL(controlsPanel, "Frame", SpriteAt("UI/Panel_Controls"), 16, 80, 80, 64);
+            Text weaponKeys = Label(controlsPanel, "Weapons", "1-3 / Q E = WEAPON", 0, 145, 112, 8, 6, TextAnchor.MiddleCenter, Yellow);
+            Variant(keysFrame.gameObject, PlatformVariant.Mode.HideOnTouch);
+            Variant(weaponKeys.gameObject, PlatformVariant.Mode.HideOnTouch);
+            Image touchHelp = ImageTL(controlsPanel, "TouchHelp", pixel, 12, 84, 88, 58);
+            touchHelp.color = new Color(0f, 0f, 0f, 0.75f);
+            Label(touchHelp.rectTransform, "Text", "DRAG = MOVE\nHOLD = SHOOT\n1 2 3 = WEAPON\nII = PAUSE", 0, 0, 88, 58, 8,
+                TextAnchor.MiddleCenter, Color.white).lineSpacing = 1.3f;
+            Variant(touchHelp.gameObject, PlatformVariant.Mode.ShowOnTouch);
             Button controlsBack = MakeButton(controlsPanel, "Back", "BACK", "Button_Teal", 56, 160);
             UnityEventTools.AddStringPersistentListener(controlsBack.onClick, ctrl.ShowPanel, "Main");
             panels.Add(new PanelDef { id = "Controls", root = controlsPanel.gameObject, first = controlsBack, backTo = "Main" });
@@ -878,6 +900,101 @@ namespace LastGrounds.EditorTools
         }
 
         /// <summary>Button centred at (cx, cy) in room pixels, like GameMaker objects with a centred origin.</summary>
+        /// <summary>Overlay canvas with the touch pad, weapon buttons and pause button (phones).</summary>
+        static void BuildTouchControls(Camera cam, GameManager gm, PlayerController player)
+        {
+            GameObject go = new GameObject("TouchControls", typeof(RectTransform));
+            go.layer = 5;
+            Canvas canvas = go.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 200;
+            CanvasScaler scaler = go.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1080f, 1920f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0f;
+            go.AddComponent<GraphicRaycaster>();
+            TouchControls touch = go.AddComponent<TouchControls>();
+
+            RectTransform root = UI("Root", go.transform);
+            Stretch(root, 0f);
+
+            RectTransform pad = UI("Pad", root);
+            pad.anchorMin = new Vector2(0f, 0f);
+            pad.anchorMax = new Vector2(1f, 0f);
+            pad.pivot = new Vector2(0.5f, 0f);
+            pad.anchoredPosition = Vector2.zero;
+            pad.sizeDelta = new Vector2(0f, 420f);
+            Image padBack = pad.gameObject.AddComponent<Image>();
+            padBack.sprite = pixel;
+            padBack.color = new Color(0f, 0f, 0f, 0.35f);
+            padBack.raycastTarget = false;
+
+            RectTransform hintRT = UI("Hint", pad);
+            Anchor(hintRT, 0f, 0.72f, 1f, 0.97f);
+            ConfigureText(hintRT.gameObject.AddComponent<Text>(), "DRAG = MOVE    HOLD = SHOOT", 30, TextAnchor.MiddleCenter, Grey, false);
+
+            string[] labels = { "1\nPISTOL", "2\nSHOTGUN", "3\nMP7" };
+            Image[] weaponImages = new Image[labels.Length];
+            List<Object> blockers = new List<Object>();
+            for (int i = 0; i < labels.Length; i++)
+            {
+                Button b = TouchButton(pad, "Weapon" + (i + 1), labels[i], 0.04f + 0.22f * i, 0.1f, 0.24f + 0.22f * i, 0.66f);
+                UnityEventTools.AddIntPersistentListener(b.onClick, touch.SelectWeapon, i);
+                weaponImages[i] = (Image)b.targetGraphic;
+                blockers.Add(b.transform);
+            }
+            Button pause = TouchButton(pad, "Pause", "II", 0.8f, 0.1f, 0.96f, 0.66f);
+            UnityEventTools.AddPersistentListener(pause.onClick, touch.Pause);
+            blockers.Add(pause.transform);
+
+            Set(touch, "root", root.gameObject);
+            Set(touch, "pad", pad);
+            Set(touch, "canvas", canvas);
+            Set(touch, "blockers", blockers.ToArray());
+            Set(touch, "weaponButtons", weaponImages);
+            Set(touch, "player", player);
+            Set(touch, "game", gm);
+            Set(touch, "viewport", cam.GetComponent<PixelViewport>());
+        }
+
+        static Button TouchButton(Transform parent, string name, string label, float xMin, float yMin, float xMax, float yMax)
+        {
+            RectTransform rt = UI(name, parent);
+            Anchor(rt, xMin, yMin, xMax, yMax);
+            Image img = rt.gameObject.AddComponent<Image>();
+            img.sprite = pixel;
+            img.color = new Color(0.15f, 0.15f, 0.15f, 0.85f);
+            Button button = rt.gameObject.AddComponent<Button>();
+            button.targetGraphic = img;
+            button.transition = Selectable.Transition.None;
+            Navigation nav = button.navigation;
+            nav.mode = Navigation.Mode.None;
+            button.navigation = nav;
+
+            RectTransform textRT = UI("Label", rt);
+            Stretch(textRT, 0f);
+            Text text = ConfigureText(textRT.gameObject.AddComponent<Text>(), label, 34, TextAnchor.MiddleCenter, Color.white, false);
+            text.lineSpacing = 1.2f;
+            return button;
+        }
+
+        static void Anchor(RectTransform rt, float xMin, float yMin, float xMax, float yMax)
+        {
+            rt.anchorMin = new Vector2(xMin, yMin);
+            rt.anchorMax = new Vector2(xMax, yMax);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
+
+        static void Variant(GameObject go, PlatformVariant.Mode mode, string touchText = "")
+        {
+            PlatformVariant v = go.AddComponent<PlatformVariant>();
+            Set(v, "mode", (int)mode);
+            Set(v, "touchText", touchText);
+        }
+
         static Button MakeButton(Transform parent, string name, string label, string spriteName, float cx, float cy,
             float width = 80f, float height = 16f, int fontSize = 8)
         {

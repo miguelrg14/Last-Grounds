@@ -1,4 +1,4 @@
-# Builds Last Grounds for the browser (WebGL), Windows and Linux with GameCI.
+# Builds Last Grounds for the browser (WebGL), Windows, Linux and Android with GameCI.
 #
 #  - Manual run (Actions tab > "Build & Release" > Run workflow): builds everything,
 #    uploads the builds as artifacts and updates the web version on GitHub Pages.
@@ -9,6 +9,10 @@
 #   UNITY_LICENSE   contents of your Unity_lic.ulf (see README > Building)
 #   UNITY_EMAIL     Unity account email
 #   UNITY_PASSWORD  Unity account password
+# Optional, Android release signing (without them the APK uses Unity's debug key,
+# which is fine for itch.io and sideloading; Google Play needs your own keystore):
+#   ANDROID_KEYSTORE_BASE64  base64 of your .keystore file
+#   ANDROID_KEYSTORE_PASS    ANDROID_KEYALIAS_NAME    ANDROID_KEYALIAS_PASS
 # Optional, for itch.io:
 #   secret   BUTLER_API_KEY   https://itch.io/user/settings/api-keys
 #   variable ITCH_GAME        e.g. miguelrg14/last-grounds
@@ -33,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        targetPlatform: [WebGL, StandaloneWindows64, StandaloneLinux64]
+        targetPlatform: [WebGL, StandaloneWindows64, StandaloneLinux64, Android]
     steps:
       # The Unity Docker image is large; make room on the runner.
       - name: Free disk space
@@ -43,7 +47,7 @@ jobs:
           android: true
           dotnet: true
           haskell: true
-          large-packages: false
+          large-packages: true
           docker-images: false
           swap-storage: false
 
@@ -80,6 +84,14 @@ jobs:
           buildMethod: LastGrounds.EditorTools.CIBuild.Build
           versioning: Custom
           version: ${{ steps.version.outputs.value }}
+          # Android only (ignored by the other platforms)
+          androidExportType: androidPackage
+          androidVersionCode: ${{ github.run_number }}
+          androidKeystoreName: lastgrounds.keystore
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
 
       - name: Upload build
         uses: actions/upload-artifact@v4
@@ -130,11 +142,14 @@ jobs:
           (cd artifacts/LastGrounds-StandaloneWindows64 && zip -qr "../../LastGrounds-$V-Windows.zip" . -x '*DoNotShip*')
           (cd artifacts/LastGrounds-StandaloneLinux64 && zip -qr "../../LastGrounds-$V-Linux.zip" . -x '*DoNotShip*')
           (cd artifacts/LastGrounds-WebGL/LastGrounds && zip -qr "../../../LastGrounds-$V-Web.zip" .)
-          ls -lh *.zip
+          cp artifacts/LastGrounds-Android/LastGrounds.apk "LastGrounds-$V-Android.apk"
+          ls -lh *.zip *.apk
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: '*.zip'
+          files: |
+            *.zip
+            *.apk
           generate_release_notes: true
 
   itch:
@@ -167,3 +182,4 @@ jobs:
           ./butler/butler push artifacts/LastGrounds-WebGL/LastGrounds "$ITCH_GAME:html5" --userversion "$V"
           ./butler/butler push artifacts/LastGrounds-StandaloneWindows64 "$ITCH_GAME:windows" --userversion "$V"
           ./butler/butler push artifacts/LastGrounds-StandaloneLinux64 "$ITCH_GAME:linux" --userversion "$V"
+          ./butler/butler push artifacts/LastGrounds-Android/LastGrounds.apk "$ITCH_GAME:android" --userversion "$V"

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -9,8 +11,88 @@ namespace LastGrounds
     /// Thin input layer. Works with the Input System package (keyboard + gamepad)
     /// and falls back to the legacy Input Manager when that is the active backend.
     /// </summary>
+    /// <summary>A finger on the screen, in screen pixels.</summary>
+    public struct TouchPoint
+    {
+        public int id;
+        public Vector2 position;
+        public bool began;
+    }
+
     public static class GameInput
     {
+        /// <summary>
+        /// True on phones/tablets, or after the screen is touched; turns off again when the
+        /// keyboard is used on a non-mobile device. Touch controls and texts follow it.
+        /// </summary>
+        public static bool TouchActive { get; private set; }
+        public static event Action TouchModeChanged;
+
+        public static void SetTouchActive(bool active)
+        {
+            if (TouchActive == active) return;
+            TouchActive = active;
+            if (TouchModeChanged != null) TouchModeChanged();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            TouchActive = false;
+            TouchModeChanged = null;
+        }
+
+        /// <summary>Fills <paramref name="results"/> with the fingers currently on the screen.</summary>
+        public static void GetTouches(List<TouchPoint> results)
+        {
+            results.Clear();
+#if ENABLE_INPUT_SYSTEM
+            Touchscreen screen = Touchscreen.current;
+            if (screen == null) return;
+            foreach (UnityEngine.InputSystem.Controls.TouchControl touch in screen.touches)
+            {
+                if (!touch.isInProgress) continue;
+                results.Add(new TouchPoint
+                {
+                    id = touch.touchId.ReadValue(),
+                    position = touch.position.ReadValue(),
+                    began = touch.press.wasPressedThisFrame,
+                });
+            }
+#else
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                Touch touch = Input.GetTouch(i);
+                if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled) continue;
+                results.Add(new TouchPoint { id = touch.fingerId, position = touch.position, began = touch.phase == TouchPhase.Began });
+            }
+#endif
+        }
+
+        public static bool TouchBegan()
+        {
+#if ENABLE_INPUT_SYSTEM
+            Touchscreen screen = Touchscreen.current;
+            return screen != null && screen.primaryTouch.press.wasPressedThisFrame;
+#else
+            for (int i = 0; i < Input.touchCount; i++)
+                if (Input.GetTouch(i).phase == TouchPhase.Began) return true;
+            return false;
+#endif
+        }
+
+        /// <summary>Keyboard gameplay keys (used to leave touch mode on desktops).</summary>
+        public static bool KeyboardUsed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            Keyboard kb = Keyboard.current;
+            return kb != null && kb.anyKey.wasPressedThisFrame;
+#else
+            return Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.RightArrow)
+                || Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.Escape);
+#endif
+        }
+
 #if ENABLE_INPUT_SYSTEM
         static bool Held(Key key)
         {
@@ -190,9 +272,10 @@ namespace LastGrounds
             Gamepad pad = Pad;
             return (kb != null && kb.anyKey.wasPressedThisFrame)
                 || (mouse != null && mouse.leftButton.wasPressedThisFrame)
+                || TouchBegan()
                 || (pad != null && (pad.startButton.wasPressedThisFrame || pad.buttonSouth.wasPressedThisFrame));
 #else
-            return Input.anyKeyDown;
+            return Input.anyKeyDown || TouchBegan();
 #endif
         }
     }

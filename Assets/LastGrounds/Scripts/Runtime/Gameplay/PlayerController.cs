@@ -24,6 +24,9 @@ namespace LastGrounds
         SpriteRenderer spriteRenderer;
         int weaponIndex;
         float nextShotTime;
+        bool hasTouchTarget;
+        float touchTargetX;
+        bool touchFiring;
 
         public WeaponData CurrentWeapon { get { return weapons.Length > 0 ? weapons[weaponIndex] : null; } }
         public int WeaponIndex { get { return weaponIndex; } }
@@ -49,8 +52,33 @@ namespace LastGrounds
             HandleFire();
         }
 
+        /// <summary>Touch controls: walk towards <paramref name="targetX"/> (world) and keep firing while held.</summary>
+        public void SetTouchInput(bool active, float targetX, bool firing)
+        {
+            hasTouchTarget = active;
+            touchTargetX = targetX;
+            touchFiring = active && firing;
+        }
+
+        /// <summary>Weapon buttons of the touch controls.</summary>
+        public void SelectWeapon(int index)
+        {
+            GameManager gm = GameManager.Instance;
+            if (gm != null && !gm.IsPlaying) return;
+            if (index >= 0 && index < weapons.Length) Equip(index, true);
+        }
+
         void Move()
         {
+            if (hasTouchTarget)
+            {
+                Vector3 p = transform.position;
+                float goal = Mathf.Clamp(touchTargetX, minX, maxX);
+                p.x = Mathf.MoveTowards(p.x, goal, moveSpeed * Time.deltaTime);
+                transform.position = p;
+                return;
+            }
+
             float input = GameInput.Horizontal();
             if (input == 0f) return;
             Vector3 position = transform.position;
@@ -72,7 +100,8 @@ namespace LastGrounds
             WeaponData weapon = CurrentWeapon;
             if (weapon == null || weapon.projectilePrefab == null) return;
 
-            bool wantsToFire = weapon.automatic ? GameInput.FireHeld() : GameInput.FirePressed();
+            // Holding a finger down fires every weapon at its own rate.
+            bool wantsToFire = touchFiring || (weapon.automatic ? GameInput.FireHeld() : GameInput.FirePressed());
             if (!wantsToFire || Time.time < nextShotTime) return;
             nextShotTime = Time.time + weapon.cooldown;
 

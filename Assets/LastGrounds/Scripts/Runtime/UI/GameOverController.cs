@@ -97,12 +97,7 @@ namespace LastGrounds
                 return;
             }
 
-            if (GameInput.ClearPressed() && mode != null)
-            {
-                Leaderboard.Clear(mode.id);
-                highlightRank = -1;
-                Refresh();
-            }
+            if (GameInput.ClearPressed()) ClearList();
 
             UISelection.Ensure(menuButton);
         }
@@ -126,6 +121,15 @@ namespace LastGrounds
             entryRoot.SetActive(false);
             Refresh();
             UISelection.SelectNextFrame(this, menuButton);
+        }
+
+        /// <summary>C key, or the CLEAR button on touch screens.</summary>
+        public void ClearList()
+        {
+            if (mode == null || EntryOpen) return;
+            Leaderboard.Clear(mode.id);
+            highlightRank = -1;
+            Refresh();
         }
 
         public void BackToMenu()
