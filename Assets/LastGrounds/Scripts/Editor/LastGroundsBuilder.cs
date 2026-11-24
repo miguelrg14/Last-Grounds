@@ -35,6 +35,14 @@ namespace LastGrounds.EditorTools
         const string SceneDir = Root + "/Scenes";
         const string AutoBuildKey = "LastGrounds.AutoBuildTried";
 
+        /// <summary>
+        /// Bump when the builder changes what it generates: projects built with an older
+        /// version are rebuilt automatically the next time scripts reload.
+        /// </summary>
+        const int BuildVersion = 2;
+
+        static string BuildVersionKey { get { return "LastGrounds.BuildVersion." + Application.dataPath; } }
+
         static readonly Color Yellow = new Color(0.83f, 0.94f, 0f, 1f);
         static readonly Color Grey = new Color(0.7f, 0.7f, 0.7f, 1f);
 
@@ -54,9 +62,13 @@ namespace LastGrounds.EditorTools
         static void AutoBuild()
         {
             if (Application.isBatchMode || EditorApplication.isPlayingOrWillChangePlaymode) return;
-            if (File.Exists(ScenePath(SceneNames.Menu))) return;
-            if (SessionState.GetBool(AutoBuildKey, false)) return;
-            SessionState.SetBool(AutoBuildKey, true);
+            bool upToDate = File.Exists(ScenePath(SceneNames.Menu))
+                && EditorPrefs.GetInt(BuildVersionKey, 0) >= BuildVersion;
+            if (upToDate) return;
+            string triedKey = AutoBuildKey + BuildVersion;
+            if (SessionState.GetBool(triedKey, false)) return;
+            SessionState.SetBool(triedKey, true);
+            Debug.Log("[Last Grounds] Generating project (builder version " + BuildVersion + ")...");
             Build();
         }
 
@@ -108,16 +120,30 @@ namespace LastGrounds.EditorTools
 
                 AssetDatabase.SaveAssets();
                 EditorSceneManager.OpenScene(ScenePath(SceneNames.Menu));
+                ValidateMenuScene();
+                EditorPrefs.SetInt(BuildVersionKey, BuildVersion);
                 Debug.Log("[Last Grounds] Project built. Press Play in the Menu scene.");
             }
             catch (Exception e)
             {
                 Debug.LogError("[Last Grounds] Build failed: " + e);
+                EditorUtility.DisplayDialog("Last Grounds", "Building the project failed:\n\n" + e.Message +
+                    "\n\nSee the Console for details.", "OK");
             }
             finally
             {
                 EditorUtility.ClearProgressBar();
             }
+        }
+
+        /// <summary>Checks the saved Menu scene really points at the game modes.</summary>
+        static void ValidateMenuScene()
+        {
+            MenuController menu = Object.FindFirstObjectByType<MenuController>();
+            if (menu == null) throw new InvalidOperationException("MenuController not found in the Menu scene.");
+            SerializedObject so = new SerializedObject(menu);
+            if (so.FindProperty("storyMode").objectReferenceValue == null)
+                throw new InvalidOperationException("The Menu scene has no Story mode assigned after building.");
         }
 
         // ------------------------------------------------------------------ imports
