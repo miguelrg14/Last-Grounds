@@ -52,12 +52,12 @@ namespace LastGrounds
             HandleFire();
         }
 
-        /// <summary>Touch controls: walk towards <paramref name="targetX"/> (world) and keep firing while held.</summary>
-        public void SetTouchInput(bool active, float targetX, bool firing)
+        /// <summary>Touch controls: walk towards <paramref name="targetX"/> (world) while moving; fire while held. Independent.</summary>
+        public void SetTouchInput(bool moving, float targetX, bool firing)
         {
-            hasTouchTarget = active;
+            hasTouchTarget = moving;
             touchTargetX = targetX;
-            touchFiring = active && firing;
+            touchFiring = firing;
         }
 
         /// <summary>Weapon buttons of the touch controls.</summary>
@@ -100,7 +100,7 @@ namespace LastGrounds
             WeaponData weapon = CurrentWeapon;
             if (weapon == null || weapon.projectilePrefab == null) return;
 
-            // Holding a finger down fires every weapon at its own rate.
+            // Holding the FIRE button fires every weapon at its own rate.
             bool wantsToFire = touchFiring || (weapon.automatic ? GameInput.FireHeld() : GameInput.FirePressed());
             if (!wantsToFire || Time.time < nextShotTime) return;
             nextShotTime = Time.time + weapon.cooldown;

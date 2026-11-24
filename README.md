@@ -39,8 +39,8 @@ the way I would build it today.
 
 | Action | Keyboard | Gamepad | Touch |
 | --- | --- | --- | --- |
-| Move | ← → / A D | Left stick / D-pad | Drag on the pad below the game |
-| Shoot | Space | A / Right trigger | Hold your finger down |
+| Move | ← → / A D | Left stick / D-pad | Drag along the MOVE pad (left) |
+| Shoot | Space | A / Right trigger | Hold FIRE (right) |
 | Switch weapon | 1 2 3, Q / E, Ctrl | LB / RB | Weapon buttons |
 | Pause | Esc / P | Start | II button / Android back |
 | Fullscreen (browser) | Button under the game | — | — |

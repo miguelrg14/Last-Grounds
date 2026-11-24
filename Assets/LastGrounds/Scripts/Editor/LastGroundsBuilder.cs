@@ -40,7 +40,7 @@ namespace LastGrounds.EditorTools
         /// Bump when the builder changes what it generates: projects built with an older
         /// version are rebuilt automatically the next time scripts reload.
         /// </summary>
-        const int BuildVersion = 5;
+        const int BuildVersion = 6;
 
         static string BuildVersionKey { get { return "LastGrounds.BuildVersion." + Application.dataPath; } }
 
@@ -681,7 +681,7 @@ namespace LastGrounds.EditorTools
             Variant(weaponKeys.gameObject, PlatformVariant.Mode.HideOnTouch);
             Image touchHelp = ImageTL(controlsPanel, "TouchHelp", pixel, 12, 84, 88, 58);
             touchHelp.color = new Color(0f, 0f, 0f, 0.75f);
-            Label(touchHelp.rectTransform, "Text", "DRAG = MOVE\nHOLD = SHOOT\n1 2 3 = WEAPON\nII = PAUSE", 0, 0, 88, 58, 8,
+            Label(touchHelp.rectTransform, "Text", "LEFT PAD = MOVE\nFIRE = SHOOT\n1 2 3 = WEAPON\nII = PAUSE", 0, 0, 88, 58, 8,
                 TextAnchor.MiddleCenter, Color.white).lineSpacing = 1.3f;
             Variant(touchHelp.gameObject, PlatformVariant.Mode.ShowOnTouch);
             Button controlsBack = MakeButton(controlsPanel, "Back", "BACK", "Button_Teal", 56, 160);
@@ -930,35 +930,66 @@ namespace LastGrounds.EditorTools
             padBack.color = new Color(0f, 0f, 0f, 0.35f);
             padBack.raycastTarget = false;
 
-            RectTransform hintRT = UI("Hint", pad);
-            Anchor(hintRT, 0f, 0.72f, 1f, 0.97f);
-            ConfigureText(hintRT.gameObject.AddComponent<Text>(), "DRAG = MOVE    HOLD = SHOOT", 30, TextAnchor.MiddleCenter, Grey, false);
-
-            string[] labels = { "1\nPISTOL", "2\nSHOTGUN", "3\nMP7" };
+            // Top row: weapons 1-2-3 and pause.
+            string[] labels = { "1 PISTOL", "2 SHOTGUN", "3 MP7" };
             Image[] weaponImages = new Image[labels.Length];
-            List<Object> blockers = new List<Object>();
             for (int i = 0; i < labels.Length; i++)
             {
-                Button b = TouchButton(pad, "Weapon" + (i + 1), labels[i], 0.04f + 0.22f * i, 0.1f, 0.24f + 0.22f * i, 0.66f);
+                Button b = TouchButton(pad, "Weapon" + (i + 1), labels[i], 0.03f + 0.2f * i, 0.72f, 0.21f + 0.2f * i, 0.95f, 26);
                 UnityEventTools.AddIntPersistentListener(b.onClick, touch.SelectWeapon, i);
                 weaponImages[i] = (Image)b.targetGraphic;
-                blockers.Add(b.transform);
             }
-            Button pause = TouchButton(pad, "Pause", "II", 0.8f, 0.1f, 0.96f, 0.66f);
+            Button pause = TouchButton(pad, "Pause", "II", 0.84f, 0.72f, 0.97f, 0.95f, 34);
             UnityEventTools.AddPersistentListener(pause.onClick, touch.Pause);
-            blockers.Add(pause.transform);
 
+            // Left: move zone (a track with a knob that follows the finger).
+            RectTransform move = UI("MoveZone", pad);
+            Anchor(move, 0.03f, 0.06f, 0.62f, 0.64f);
+            Image moveBack = move.gameObject.AddComponent<Image>();
+            moveBack.sprite = pixel;
+            moveBack.color = new Color(1f, 1f, 1f, 0.08f);
+            moveBack.raycastTarget = false;
+            RectTransform track = UI("Track", move);
+            Anchor(track, 0.04f, 0.46f, 0.96f, 0.54f);
+            Image trackImage = track.gameObject.AddComponent<Image>();
+            trackImage.sprite = pixel;
+            trackImage.color = new Color(1f, 1f, 1f, 0.25f);
+            trackImage.raycastTarget = false;
+            RectTransform knob = UI("Knob", move);
+            Anchor(knob, 0.44f, 0.2f, 0.56f, 0.8f);
+            Image knobImage = knob.gameObject.AddComponent<Image>();
+            knobImage.sprite = pixel;
+            knobImage.color = new Color(0.83f, 0.94f, 0f, 0.9f);
+            knobImage.raycastTarget = false;
+            RectTransform moveLabel = UI("Label", move);
+            Anchor(moveLabel, 0f, 0.02f, 1f, 0.3f);
+            ConfigureText(moveLabel.gameObject.AddComponent<Text>(), "< MOVE >", 28, TextAnchor.MiddleCenter, Grey, false);
+
+            // Right: FIRE (held).
+            RectTransform fire = UI("Fire", pad);
+            Anchor(fire, 0.66f, 0.06f, 0.97f, 0.64f);
+            Image fireImage = fire.gameObject.AddComponent<Image>();
+            fireImage.sprite = pixel;
+            fireImage.color = new Color(0.55f, 0.08f, 0.08f, 0.9f);
+            fireImage.raycastTarget = false;
+            RectTransform fireLabel = UI("Label", fire);
+            Stretch(fireLabel, 0f);
+            ConfigureText(fireLabel.gameObject.AddComponent<Text>(), "FIRE", 44, TextAnchor.MiddleCenter, Color.white, false);
+
+            Set(touch, "moveZone", move);
+            Set(touch, "moveKnob", knob);
+            Set(touch, "fireButton", fire);
+            Set(touch, "fireImage", fireImage);
             Set(touch, "root", root.gameObject);
             Set(touch, "pad", pad);
             Set(touch, "canvas", canvas);
-            Set(touch, "blockers", blockers.ToArray());
             Set(touch, "weaponButtons", weaponImages);
             Set(touch, "player", player);
             Set(touch, "game", gm);
             Set(touch, "viewport", cam.GetComponent<PixelViewport>());
         }
 
-        static Button TouchButton(Transform parent, string name, string label, float xMin, float yMin, float xMax, float yMax)
+        static Button TouchButton(Transform parent, string name, string label, float xMin, float yMin, float xMax, float yMax, int fontSize)
         {
             RectTransform rt = UI(name, parent);
             Anchor(rt, xMin, yMin, xMax, yMax);
@@ -974,8 +1005,7 @@ namespace LastGrounds.EditorTools
 
             RectTransform textRT = UI("Label", rt);
             Stretch(textRT, 0f);
-            Text text = ConfigureText(textRT.gameObject.AddComponent<Text>(), label, 34, TextAnchor.MiddleCenter, Color.white, false);
-            text.lineSpacing = 1.2f;
+            ConfigureText(textRT.gameObject.AddComponent<Text>(), label, fontSize, TextAnchor.MiddleCenter, Color.white, false);
             return button;
         }
 
