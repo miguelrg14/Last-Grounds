@@ -45,6 +45,11 @@ namespace LastGrounds
             Instance = this;
             Mode = GameSession.CurrentMode != null ? GameSession.CurrentMode : defaultMode;
             GameSession.CurrentMode = Mode;
+            if (Mode == null)
+            {
+                Debug.LogError("[Last Grounds] No GameModeData assigned. Run 'Last Grounds > Rebuild Project'.", this);
+                enabled = false;
+            }
         }
 
         void OnEnable()
@@ -67,6 +72,7 @@ namespace LastGrounds
 
         void Start()
         {
+            if (Mode == null) return;
             Time.timeScale = 1f;
             state = State.Playing;
             if (pausePanel != null) pausePanel.SetActive(false);

@@ -86,8 +86,13 @@ namespace LastGrounds
         {
             if (weapons.Length == 0) return;
             if (playSound && index == weaponIndex) return;
+            WeaponData weapon = weapons[Mathf.Clamp(index, 0, weapons.Length - 1)];
+            if (weapon == null)
+            {
+                Debug.LogError("[Last Grounds] Weapon slot " + index + " is empty. Run 'Last Grounds > Rebuild Project'.", this);
+                return;
+            }
             weaponIndex = Mathf.Clamp(index, 0, weapons.Length - 1);
-            WeaponData weapon = weapons[weaponIndex];
             if (weapon.playerSprite != null) spriteRenderer.sprite = weapon.playerSprite;
             // Small grace so switching is not a way to bypass the shotgun's fire rate.
             nextShotTime = Mathf.Max(nextShotTime, Time.time + 0.1f);

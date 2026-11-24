@@ -86,14 +86,17 @@ namespace LastGrounds.EditorTools
                 if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
                 EditorUtility.DisplayProgressBar("Last Grounds", "Creating prefabs and data...", 0.3f);
-                WeaponData[] weapons = BuildWeapons();
+                BuildWeapons();
                 BuildEnemies();
-                Dictionary<string, GameModeData> modes = BuildModes();
+                BuildModes();
+                // Write the data to disk now: opening a new scene unloads unused assets,
+                // so each scene builder reloads what it needs from disk (see Data<T>).
+                AssetDatabase.SaveAssets();
 
                 EditorUtility.DisplayProgressBar("Last Grounds", "Building scenes...", 0.6f);
-                BuildGameScene(weapons, modes["normal"]);
-                BuildGameOverScene(modes["normal"]);
-                BuildMenuScene(modes);
+                BuildGameScene();
+                BuildGameOverScene();
+                BuildMenuScene();
 
                 EditorBuildSettings.scenes = new[]
                 {
@@ -161,7 +164,7 @@ namespace LastGrounds.EditorTools
 
         // ------------------------------------------------------------------ data + prefabs
 
-        static WeaponData[] BuildWeapons()
+        static void BuildWeapons()
         {
             AudioClip shot = Clip("SFX/SFX_Shot.mp3");
 
@@ -170,7 +173,7 @@ namespace LastGrounds.EditorTools
             Projectile shotgunBlast = BuildProjectile("Bullet_Shotgun", Projectile.Team.Player, 1, 2, 15, 14);
             Projectile mp7Bullet = BuildProjectile("Bullet_MP7", Projectile.Team.Player, 9, 2, 9, 3);
 
-            WeaponData pistol = Asset<WeaponData>("Weapon_Pistol", w =>
+            Asset<WeaponData>("Weapon_Pistol", w =>
             {
                 w.displayName = "PISTOL";
                 w.playerSprite = SpriteAt("Player/Player_Pistol");
@@ -183,7 +186,7 @@ namespace LastGrounds.EditorTools
                 w.shotVolume = 0.8f;
                 w.shotPitch = 1f;
             });
-            WeaponData shotgun = Asset<WeaponData>("Weapon_Shotgun", w =>
+            Asset<WeaponData>("Weapon_Shotgun", w =>
             {
                 w.displayName = "SHOTGUN";
                 w.playerSprite = SpriteAt("Player/Player_Shotgun");
@@ -196,7 +199,7 @@ namespace LastGrounds.EditorTools
                 w.shotVolume = 1f;
                 w.shotPitch = 0.65f;
             });
-            WeaponData mp7 = Asset<WeaponData>("Weapon_MP7", w =>
+            Asset<WeaponData>("Weapon_MP7", w =>
             {
                 w.displayName = "MP7";
                 w.playerSprite = SpriteAt("Player/Player_MP7");
@@ -209,7 +212,6 @@ namespace LastGrounds.EditorTools
                 w.shotVolume = 0.3f;
                 w.shotPitch = 1.5f;
             });
-            return new[] { pistol, shotgun, mp7 };
         }
 
         static void BuildEnemies()
@@ -256,7 +258,7 @@ namespace LastGrounds.EditorTools
             });
         }
 
-        static Dictionary<string, GameModeData> BuildModes()
+        static void BuildModes()
         {
             Dictionary<string, GameModeData> modes = new Dictionary<string, GameModeData>();
             float[] oneOrTwo = { 1f, 2f };
@@ -290,7 +292,6 @@ namespace LastGrounds.EditorTools
                 Phase("DAY 3", 120f, oneOrTwo, 4, 4, 1, 1, 1),
                 Phase("DAY 4", 180f, oneOrTwo, 2, 6, 1, 1, 1),
                 Phase("DAY 5", 240f, new[] { 1f }, 1, 6, 2, 1, 1));
-            return modes;
         }
 
         static GameModeData Mode(string file, string id, string displayName, float firstDelay, float survival, params SpawnPhase[] phases)
@@ -406,9 +407,16 @@ namespace LastGrounds.EditorTools
 
         // ------------------------------------------------------------------ scenes
 
-        static void BuildGameScene(WeaponData[] weapons, GameModeData defaultMode)
+        static void BuildGameScene()
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            WeaponData[] weapons =
+            {
+                Data<WeaponData>("Weapon_Pistol"),
+                Data<WeaponData>("Weapon_Shotgun"),
+                Data<WeaponData>("Weapon_MP7"),
+            };
+            GameModeData defaultMode = Data<GameModeData>("Mode_Normal");
             Camera cam = CreateCameras();
             CreateEventSystem();
 
@@ -484,9 +492,10 @@ namespace LastGrounds.EditorTools
             EditorSceneManager.SaveScene(scene, ScenePath(SceneNames.Game));
         }
 
-        static void BuildGameOverScene(GameModeData fallbackMode)
+        static void BuildGameOverScene()
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameModeData fallbackMode = Data<GameModeData>("Mode_Normal");
             Camera cam = CreateCameras();
             CreateEventSystem();
             RectTransform canvas = CreateCanvas("UI", cam, 0);
@@ -543,9 +552,12 @@ namespace LastGrounds.EditorTools
             public string backTo;
         }
 
-        static void BuildMenuScene(Dictionary<string, GameModeData> modes)
+        static void BuildMenuScene()
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Dictionary<string, GameModeData> modes = new Dictionary<string, GameModeData>();
+            foreach (string id in new[] { "Easy", "Normal", "Hard", "Hardcore", "Ascent", "Story" })
+                modes[id.ToLowerInvariant()] = Data<GameModeData>("Mode_" + id);
             Camera cam = CreateCameras();
             CreateEventSystem();
             RectTransform canvas = CreateCanvas("UI", cam, 0);
@@ -893,6 +905,18 @@ namespace LastGrounds.EditorTools
             AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
             if (clip == null) Debug.LogWarning("[Last Grounds] Audio not found: " + path);
             return clip;
+        }
+
+        /// <summary>
+        /// Loads a data asset from disk. Always reload after EditorSceneManager.NewScene:
+        /// references held from before point to unloaded objects and serialize as null.
+        /// </summary>
+        static T Data<T>(string fileName) where T : ScriptableObject
+        {
+            string path = DataDir + "/" + fileName + ".asset";
+            T asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            if (asset == null) throw new InvalidOperationException("Data asset missing or unreadable: " + path);
+            return asset;
         }
 
         /// <summary>Loads or creates a ScriptableObject under Data/, keeping its GUID across rebuilds.</summary>

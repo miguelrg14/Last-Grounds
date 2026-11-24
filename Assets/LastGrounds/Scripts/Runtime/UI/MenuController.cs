@@ -81,7 +81,11 @@ namespace LastGrounds
 
         public void StartMode(GameModeData mode)
         {
-            if (mode == null) return;
+            if (mode == null)
+            {
+                Debug.LogError("[Last Grounds] This button has no GameModeData. Run 'Last Grounds > Rebuild Project'.", this);
+                return;
+            }
             GameSession.CurrentMode = mode;
             GameSession.LastResult = null;
             SceneManager.LoadScene(SceneNames.Game);
