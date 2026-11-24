@@ -155,6 +155,33 @@ namespace LastGrounds
 #endif
         }
 
+        public static bool ScreenshotPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Down(Key.F12);
+#else
+            return Input.GetKeyDown(KeyCode.F12);
+#endif
+        }
+
+        public static bool ToggleUiPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Down(Key.F10);
+#else
+            return Input.GetKeyDown(KeyCode.F10);
+#endif
+        }
+
+        public static bool ToggleInvinciblePressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Down(Key.F9);
+#else
+            return Input.GetKeyDown(KeyCode.F9);
+#endif
+        }
+
         public static bool AnyPressed()
         {
 #if ENABLE_INPUT_SYSTEM

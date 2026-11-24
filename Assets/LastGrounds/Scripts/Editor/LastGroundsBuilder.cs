@@ -39,7 +39,7 @@ namespace LastGrounds.EditorTools
         /// Bump when the builder changes what it generates: projects built with an older
         /// version are rebuilt automatically the next time scripts reload.
         /// </summary>
-        const int BuildVersion = 3;
+        const int BuildVersion = 4;
 
         static string BuildVersionKey { get { return "LastGrounds.BuildVersion." + Application.dataPath; } }
 
@@ -47,6 +47,7 @@ namespace LastGrounds.EditorTools
         static readonly Color Grey = new Color(0.7f, 0.7f, 0.7f, 1f);
 
         static Font font;
+        static GameObject exitButton;
         static Sprite pixel;
 
         // Prefabs needed by the game modes.
@@ -81,9 +82,10 @@ namespace LastGrounds.EditorTools
             if (ok) Build();
         }
 
-        public static void Build()
+        /// <summary>Generates everything. Returns false if it failed (also used by CI).</summary>
+        public static bool Build()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return false;
             try
             {
                 EditorUtility.DisplayProgressBar("Last Grounds", "Configuring imports...", 0.1f);
@@ -123,12 +125,17 @@ namespace LastGrounds.EditorTools
                 ValidateMenuScene();
                 EditorPrefs.SetInt(BuildVersionKey, BuildVersion);
                 Debug.Log("[Last Grounds] Project built. Press Play in the Menu scene.");
+                return true;
             }
             catch (Exception e)
             {
                 Debug.LogError("[Last Grounds] Build failed: " + e);
-                EditorUtility.DisplayDialog("Last Grounds", "Building the project failed:\n\n" + e.Message +
-                    "\n\nSee the Console for details.", "OK");
+                if (!Application.isBatchMode)
+                {
+                    EditorUtility.DisplayDialog("Last Grounds", "Building the project failed:\n\n" + e.Message +
+                        "\n\nSee the Console for details.", "OK");
+                }
+                return false;
             }
             finally
             {
@@ -190,6 +197,13 @@ namespace LastGrounds.EditorTools
             PlayerSettings.defaultScreenHeight = PlayField.RoomHeight * 6;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
             PlayerSettings.resizableWindow = true;
+
+            // Web: 4x the original resolution fits most screens (itch.io embed uses the same size).
+            // Gzip + decompression fallback works on any host, including GitHub Pages and itch.io.
+            PlayerSettings.defaultWebScreenWidth = PlayField.RoomWidth * 4;
+            PlayerSettings.defaultWebScreenHeight = PlayField.RoomHeight * 4;
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.decompressionFallback = true;
             EditorSettings.defaultBehaviorMode = EditorBehaviorMode.Mode2D;
         }
 
@@ -615,6 +629,7 @@ namespace LastGrounds.EditorTools
             UnityEventTools.AddStringPersistentListener(options.onClick, ctrl.ShowPanel, "Options");
             UnityEventTools.AddStringPersistentListener(credits.onClick, ctrl.ShowPanel, "Credits");
             UnityEventTools.AddPersistentListener(exit.onClick, ctrl.QuitGame);
+            exitButton = exit.gameObject;
             panels.Add(new PanelDef { id = "Main", root = main.gameObject, first = play });
 
             // Game type (MenuSeleccionJuego). Story was unreachable in the original.
@@ -703,6 +718,9 @@ namespace LastGrounds.EditorTools
             }
             so.FindProperty("menuMusic").objectReferenceValue = Clip("Music/Music_Menu.ogg");
             so.FindProperty("storyMode").objectReferenceValue = modes["story"];
+            SerializedProperty hiddenOnWeb = so.FindProperty("hiddenOnWeb");
+            hiddenOnWeb.arraySize = 1;
+            hiddenOnWeb.GetArrayElementAtIndex(0).objectReferenceValue = exitButton;
             string[] hordeIds = { "ascent", "easy", "normal", "hard", "hardcore" };
             SerializedProperty hordeList = so.FindProperty("hordeModes");
             hordeList.arraySize = hordeIds.Length;

@@ -26,6 +26,8 @@ namespace LastGrounds
         [SerializeField] string mainPanel = "Main";
         [SerializeField] AudioClip menuMusic;
         [SerializeField] GameModeData storyMode;
+        [Tooltip("Hidden in browser builds, where quitting is not possible (the Exit button).")]
+        [SerializeField] GameObject[] hiddenOnWeb = new GameObject[0];
         [Tooltip("Modes the horde buttons can start, looked up by GameModeData.id.")]
         [SerializeField] GameModeData[] hordeModes = new GameModeData[0];
 
@@ -34,6 +36,10 @@ namespace LastGrounds
         void Start()
         {
             Time.timeScale = 1f;
+#if UNITY_WEBGL
+            for (int i = 0; i < hiddenOnWeb.Length; i++)
+                if (hiddenOnWeb[i] != null) hiddenOnWeb[i].SetActive(false);
+#endif
             string first = GameSession.SkipTitle ? mainPanel : titlePanel;
             GameSession.SkipTitle = false;
             ShowPanel(first);

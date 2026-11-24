@@ -1,5 +1,10 @@
 # Last Grounds
 
+[![Build & Release](https://github.com/miguelrg14/Last-Grounds/actions/workflows/build.yml/badge.svg)](https://github.com/miguelrg14/Last-Grounds/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/miguelrg14/Last-Grounds?label=download)](https://github.com/miguelrg14/Last-Grounds/releases/latest)
+[![Play in browser](https://img.shields.io/badge/play-in%20browser-d4ef00)](https://miguelrg14.github.io/Last-Grounds/)
+![Unity 6](https://img.shields.io/badge/Unity-6-black?logo=unity)
+
 A top-down pixel-art zombie horde shooter. Hold the last barricade, switch between three
 weapons and survive as long as you can — or survive five days until rescue arrives.
 
@@ -10,6 +15,11 @@ the way I would build it today.
 ![Art preview: title, gameplay and game over screens](Docs/preview.png)
 
 *Composition of the original sprites (title, play field, game over).*
+
+## Play
+
+- **In the browser**: https://miguelrg14.github.io/Last-Grounds/
+- **Windows / Linux**: download the zip from the [latest release](https://github.com/miguelrg14/Last-Grounds/releases/latest)
 
 ## Features
 
@@ -30,6 +40,7 @@ the way I would build it today.
 | Shoot | Space | A / Right trigger |
 | Switch weapon | 1 2 3, Q / E, Ctrl | LB / RB |
 | Pause | Esc / P | Start |
+| Fullscreen (browser) | Button under the game | — |
 | Clear leaderboard (game over screen) | C | — |
 
 ## Opening the project
@@ -44,6 +55,38 @@ the way I would build it today.
 4. Press **Play**. For the original window shape, set the Game view to 672×1056.
 
 You can regenerate everything at any time from **Last Grounds → Rebuild Project**.
+
+### Capture tools (editor and development builds only)
+
+| Key | Action |
+| --- | --- |
+| F12 | Save a screenshot to `Screenshots/` (project root) |
+| F10 | Hide / show the UI for clean shots |
+| F9 | Invincible barricade, to record long gameplay takes |
+
+## Building
+
+Builds are made by GitHub Actions with [GameCI](https://game.ci)
+([`.github/workflows/build.yml`](.github/workflows/build.yml)):
+
+| Trigger | Result |
+| --- | --- |
+| Actions → *Build & Release* → **Run workflow** | WebGL, Windows and Linux builds as artifacts; web version deployed to GitHub Pages |
+| Push a tag `v*` (e.g. `git tag v1.0.0 && git push origin v1.0.0`) | The above, plus a GitHub Release with the zips and an upload to itch.io |
+
+CI calls `LastGrounds.EditorTools.CIBuild.Build`, which generates the project and builds
+the player, so the generated folders do not need to be committed.
+
+**One-time setup**
+
+1. **Unity license**: activate Unity Personal in Unity Hub on your machine, then copy the
+   contents of the license file into a repository secret named `UNITY_LICENSE`
+   (Windows: `C:\ProgramData\Unity\Unity_lic.ulf`, macOS: `/Library/Application Support/Unity/Unity_lic.ulf`,
+   Linux: `~/.local/share/unity3d/Unity/Unity_lic.ulf`). Add `UNITY_EMAIL` and `UNITY_PASSWORD` too.
+2. **GitHub Pages**: Settings → Pages → Source: **GitHub Actions**.
+3. **itch.io (optional)**: create the game page, add the secret `BUTLER_API_KEY`
+   (from https://itch.io/user/settings/api-keys) and the variable `ITCH_GAME`
+   (e.g. `miguelrg14/last-grounds`). Channels: `html5`, `windows`, `linux`.
 
 ## How the port is structured
 

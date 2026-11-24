@@ -34,3 +34,7 @@ Thumbs.db
 *.aab
 *.unitypackage
 crashlytics-buildid.txt
+
+# Capture tools output
+/Screenshots/
+/Recordings/

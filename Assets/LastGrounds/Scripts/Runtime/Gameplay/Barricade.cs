@@ -71,6 +71,7 @@ namespace LastGrounds
         public void TakeDamage(int amount)
         {
             if (IsDestroyed || amount <= 0) return;
+            if (CaptureTools.InvincibleBarricade) amount = 0;
             Health = Mathf.Max(0, Health - amount);
             flashTimer = hitFlashTime;
             spriteRenderer.color = hitColor;
